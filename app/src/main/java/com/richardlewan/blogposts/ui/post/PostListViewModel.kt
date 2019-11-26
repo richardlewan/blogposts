@@ -5,7 +5,9 @@ import androidx.lifecycle.MutableLiveData
 import com.richardlewan.blogposts.R
 import com.richardlewan.blogposts.base.Post
 import com.richardlewan.blogposts.model.BaseViewModel
+import com.richardlewan.blogposts.model.PostDao
 import com.richardlewan.blogposts.network.PostApi
+import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -14,7 +16,7 @@ import javax.inject.Inject
 /**
  * Note: See inject() function in parent class (!)
  */
-class PostListViewModel: BaseViewModel(){
+class PostListViewModel(private val postDao: PostDao):BaseViewModel(){
     @Inject
     lateinit var postApi: PostApi
 
@@ -32,13 +34,22 @@ class PostListViewModel: BaseViewModel(){
     }
 
     private fun loadPosts(){
-        subscription = postApi.getPosts()
+        subscription = Observable.fromCallable { postDao.all }
+            .concatMap {
+                    dbPostList ->
+                if(dbPostList.isEmpty())
+                    postApi.getPosts().concatMap {
+                            apiPostList -> postDao.insertAll(*apiPostList.toTypedArray())
+                        Observable.just(apiPostList)
+                    }
+                else
+                    Observable.just(dbPostList)
+            }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .doOnSubscribe { onRetrievePostListStart() }
             .doOnTerminate { onRetrievePostListFinish() }
             .subscribe(
-                // Add result
                 { result -> onRetrievePostListSuccess(result) },
                 { onRetrievePostListError() }
             )

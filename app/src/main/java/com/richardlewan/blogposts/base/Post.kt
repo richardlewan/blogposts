@@ -1,5 +1,8 @@
 package com.richardlewan.blogposts.base
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
 /**
  * Class which provides a model for post
  * @constructor Sets all properties of the post
@@ -8,4 +11,11 @@ package com.richardlewan.blogposts.base
  * @property title the title of the post
  * @property body the content of the post
  */
-data class Post(val userId: Int, val id: Int, val title: String, val body: String)
+@Entity
+data class Post(
+    val userId: Int,
+    @field:PrimaryKey
+    val id: Int,
+    val title: String,
+    val body: String
+)
